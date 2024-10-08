@@ -1,3 +1,5 @@
+import * as THREE from './three.module.js';
+
 main();
 
 function main() {
@@ -27,16 +29,20 @@ function main() {
     planeTextureMap.wrapT = THREE.RepeatWrapping;
     planeTextureMap.repeat.set(16, 50);
 
+    // Use renderer capabilities to get max anisotropy
+    const maxAnisotropy = gl.capabilities.getMaxAnisotropy();
+
     const planeMaterial = new THREE.MeshLambertMaterial({ map: planeTextureMap, side: THREE.DoubleSide });
-    planeTextureMap.anisotropy = gl.getMaxAnisotropy();
-    
+    planeTextureMap.anisotropy = maxAnisotropy;
+
     const fog = new THREE.Fog("gray", 1, 100);
     scene.fog = fog;
 
     const sphereNormalMap = textureLoader.load('textures/cement.jpg');
-        sphereNormalMap.wrapS = THREE.RepeatWrapping;
-        sphereNormalMap.wrapT = THREE.RepeatWrapping;
-        const sphereMaterial = new THREE.MeshStandardMaterial({color: 'tan',normalMap: sphereNormalMap});
+    sphereNormalMap.wrapS = THREE.RepeatWrapping;
+    sphereNormalMap.wrapT = THREE.RepeatWrapping;
+
+    const sphereMaterial = new THREE.MeshStandardMaterial({ color: 'tan', normalMap: sphereNormalMap });
 
     // GEOMETRY
     // Cube
@@ -74,8 +80,7 @@ function main() {
 
     const ambientColor = 0xffffff;
     const ambientIntensity = 0.2;
-    const ambientLight = new THREE.AmbientLight(ambientColor,
-    ambientIntensity);
+    const ambientLight = new THREE.AmbientLight(ambientColor, ambientIntensity);
     scene.add(ambientLight);
 
     // DRAW
@@ -93,9 +98,9 @@ function main() {
 
         sphere.rotation.x += 0.01;
         sphere.rotation.y += 0.01;
-        
-        light.position.x = 20*Math.cos(time);
-        light.position.y = 20*Math.sin(time);
+
+        light.position.x = 20 * Math.cos(time);
+        light.position.y = 20 * Math.sin(time);
 
         gl.render(scene, camera);
         requestAnimationFrame(draw);
@@ -120,6 +125,4 @@ function main() {
         }
         return needResize;
     }
-
-
 }
