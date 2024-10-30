@@ -1,4 +1,4 @@
-import * as THREE from './three.module.js';
+import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.module.min.js";
 import { VRButton } from './VRButton.js';
 
 var gl, cube, sphere, light, camera, scene;
