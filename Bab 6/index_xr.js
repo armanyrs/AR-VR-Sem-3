@@ -1,7 +1,8 @@
 import * as THREE from "https://cdnjs.cloudflare.com/ajax/libs/three.js/r118/three.module.min.js";
 import { VRButton } from './VRButton.js';
 
-var gl, cube, sphere, light, camera, scene;
+var gl, cube, sphere, light, camera, scene, controller;
+
 init();
 animate();
 
@@ -12,21 +13,23 @@ function init() {
     gl.setSize(window.innerWidth, window.innerHeight);
     gl.outputEncoding = THREE.sRGBEncoding;
     gl.xr.enabled = true;
+
     document.body.appendChild(gl.domElement);
-    document.body.appendChild(VRButton.createButton(gl));
+    document.body.appendChild(VRButton.createButton(gl)); // Ensure this returns a Node
 
     // create camera
     const angleOfView = 55;
     const aspectRatio = window.innerWidth / window.innerHeight;
     const nearPlane = 0.1;
     const farPlane = 1000;
+
     camera = new THREE.PerspectiveCamera(angleOfView, aspectRatio, nearPlane, farPlane);
     camera.position.set(0, 8, 30);
 
     // create the scene
     scene = new THREE.Scene();
     scene.background = new THREE.Color(0.3, 0.5, 0.8);
-    const fog = new THREE.Fog("grey", 1, 90);
+    const fog = new THREE.Fog("blue", 1, 90);
     scene.fog = fog;
 
     // GEOMETRY
@@ -47,29 +50,27 @@ function init() {
 
     // MATERIALS
     const textureLoader = new THREE.TextureLoader();
-    const cubeMaterial = new THREE.MeshPhongMaterial({ color: 'pink' });
+    const cubeMaterial = new THREE.MeshPhongMaterial({ color: 'red' });
 
-    const sphereNormalMap = textureLoader.load('textures/cement.jpg');
+    const sphereNormalMap = textureLoader.load('textures/sphere_normal.png');
     sphereNormalMap.wrapS = THREE.RepeatWrapping;
     sphereNormalMap.wrapT = THREE.RepeatWrapping;
-    const sphereMaterial = new THREE.MeshStandardMaterial({
-        color: 'tan',
-        normalMap: sphereNormalMap
-    });
 
-    const planeTextureMap = textureLoader.load('textures/cement.jpg');
+    const sphereMaterial = new THREE.MeshStandardMaterial({ color: 'green', normalMap: sphereNormalMap });
+
+    const planeTextureMap = textureLoader.load('textures/pebbles.jpg');
     planeTextureMap.wrapS = THREE.RepeatWrapping;
     planeTextureMap.wrapT = THREE.RepeatWrapping;
     planeTextureMap.repeat.set(16, 16);
     planeTextureMap.minFilter = THREE.NearestFilter;
-    planeTextureMap.anisotropy = gl.capabilities.getMaxAnisotropy();
+    planeTextureMap.anisotropy = gl.getMaxAnisotropy();
 
-    const planeNorm = textureLoader.load('textures/cement.jpg');
+    const planeNorm = textureLoader.load('textures/pebbles_gray.png');
     planeNorm.wrapS = THREE.RepeatWrapping;
     planeNorm.wrapT = THREE.RepeatWrapping;
     planeNorm.minFilter = THREE.NearestFilter;
     planeNorm.repeat.set(16, 16);
-    
+
     const planeMaterial = new THREE.MeshStandardMaterial({
         map: planeTextureMap,
         side: THREE.DoubleSide,
@@ -87,7 +88,7 @@ function init() {
 
     const plane = new THREE.Mesh(planeGeometry, planeMaterial);
     plane.rotation.x = Math.PI / 2;
-    scene.add(plane);
+    scene.add(plane); // Add the plane to the scene
 
     // LIGHTS
     const color = 0xffffff;
@@ -102,28 +103,48 @@ function init() {
     const ambientIntensity = 0.2;
     const ambientLight = new THREE.AmbientLight(ambientColor, ambientIntensity);
     scene.add(ambientLight);
+
+    // CONTROLLER
+    controller = gl.xr.getController(0);
+    controller.addEventListener('selectstart', onSelectStart); // Listen for controller input
+    scene.add(controller);
 }
 
-function animate() {
-    // Render loop
-    gl.setAnimationLoop(() => {
-        resizeDisplay();
-        render();
-    });
+function onSelectStart() {
+    // Change color when controller button is pressed
+    cube.material.color.set(Math.random() * 0xffffff); // Random color for the cube
+    sphere.material.color.set(Math.random() * 0xffffff); // Random color for the sphere
 }
 
-function render() {
+function render(time) {
+    time *= 0.001;
+    
+    // Update camera aspect ratio on resize
+    if (resizeDisplay()) {
+        camera.aspect = window.innerWidth / window.innerHeight;
+        camera.updateProjectionMatrix();
+    }
+    // Rotate objects
     cube.rotation.x += 0.01;
     cube.rotation.y += 0.01;
     cube.rotation.z += 0.01;
     sphere.rotation.x += 0.01;
     sphere.rotation.y += 0.01;
-    sphere.rotation.y += 0.01;
-    light.position.x = 20 * Math.cos(performance.now() * 0.001);
-    light.position.y = 20 * Math.sin(performance.now() * 0.001);
+    sphere.rotation.z += 0.01;
+
+    // Update light position
+    light.position.x = 20 * Math.cos(time);
+    light.position.y = 20 * Math.sin(time);
+    
+    // Render the scene
     gl.render(scene, camera);
 }
 
+function animate() {
+    gl.setAnimationLoop(render);
+}
+
+// UPDATE RESIZE
 function resizeDisplay() {
     const canvas = gl.domElement;
     const width = canvas.clientWidth;
@@ -131,7 +152,6 @@ function resizeDisplay() {
     const needResize = canvas.width !== width || canvas.height !== height;
     if (needResize) {
         gl.setSize(width, height, false);
-        camera.aspect = width / height;
-        camera.updateProjectionMatrix();
     }
+    return needResize;
 }
